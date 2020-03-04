@@ -1,0 +1,18 @@
+name: deep_rl_for_portfolio_optimization
+channels:
+- https://conda.anaconda.org/pytorch
+- https://conda.anaconda.org/conda-forge
+dependencies:
+- python=3.7.6
+- pytorch
+- torchvision
+- cpuonly
+- tqdm
+- torchvision
+- ipykernel
+- pandas
+- tensorboardx=2.0
+- seaborn
+- tqdm
+- ipywidgets
+- jupyter
