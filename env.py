@@ -299,8 +299,8 @@ class Environment:
 
                     cumulative_rewards.append(total_reward)
                     cumulative_pnls.append(total_pnl)
-                    print('Episode: {}'.format(episode),
-                          'Total reward: {:.2f}'.format(total_reward))
+                    # print('Episode: {}'.format(episode),
+                    #      'Total reward: {:.2f}'.format(total_reward))
 
         return (np.mean(cumulative_rewards), scores, scores_cumsum,
                 np.mean(cumulative_pnls), positions)
@@ -425,8 +425,8 @@ class Environment:
 
                     cumulative_rewards.append(total_reward)
                     cumulative_pnls.append(total_pnl)
-                    print('Episode: {}'.format(episode),
-                          'Total reward: {:.2f}'.format(total_reward))
+                    # print('Episode: {}'.format(episode),
+                    #       'Total reward: {:.2f}'.format(total_reward))
 
         return (np.mean(cumulative_rewards), scores, scores_cumsum,
                 np.mean(cumulative_pnls), positions)

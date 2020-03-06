@@ -59,7 +59,7 @@ def test_models(path_weights, env, fc1_units=16, fc2_units=8, random_state=1024,
     positions = {}
     pnls = {}
     for model_name in models_names:
-        print(model_name)
+        # print(model_name)
         state_dict = torch.load(path_weights + model_name)
         model = Actor(env.state_size, fc1_units=fc1_units, fc2_units=fc2_units)
         model.load_state_dict(state_dict)
@@ -70,8 +70,8 @@ def test_models(path_weights, env, fc1_units=16, fc2_units=8, random_state=1024,
         scores_cumsum[int(model_name[5:][:-4])] = score_cumsum
         positions[int(model_name[5:][:-4])] = position
         pnls[int(model_name[5:][:-4])] = pnl
-        print('Average score : %.2f' % score)
-        print('\n')
+        # print('Average score : %.2f' % score)
+        # print('\n')
 
     return scores, scores_episodes, scores_cumsum, pnls, positions
 

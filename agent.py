@@ -482,7 +482,7 @@ class Agent:
         # Save the initialized model
         model_file = weights + 'ddpg_1' + '.pth'
         torch.save(self.actor_local.state_dict(), model_file)
-        print('\nSaved model to ' + model_file + '\n')
+        # print('\nSaved model to ' + model_file + '\n')
 
         # Initialize containers to add some useful information about training (useful to
         # visualize with tensorboard)
@@ -697,7 +697,7 @@ class Agent:
             if (episode % freq) == 0:
                 model_file = weights + 'ddpg_' + str(episode) + '.pth'
                 torch.save(self.actor_local.state_dict(), model_file)
-                print('\nSaved model to ' + model_file + '\n')
+                # print('\nSaved model to ' + model_file + '\n')
 
         writer.export_scalars_to_json("./all_scalars.json")
         writer.close()
