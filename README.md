@@ -35,7 +35,6 @@ conda activate deep_rl_for_portfolio_optimization
 Install the corresponding IPython kernel:
 ```
 python -m ipykernel install --name deep_rl_for_portfolio_optimization --user
-
 ```
 
 
