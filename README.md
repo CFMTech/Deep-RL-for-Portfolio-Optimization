@@ -1,10 +1,12 @@
 ﻿# Deep RL for Portfolio Optimization
 
-In this repository we explore deep reinforcement learning methods to solve portfolio
-optimization problems, more precisely, we consider three tractable cost models of which
-the optimal/approximately optimal solutions are well known in the literature and adapt
-Deep Deterministic Policy Gradient (DDPG) algorithm to each one of these problems to
-retrieve the corresponding solutions.
+This repository accompanies our [arXiv preprint](https://arxiv.org/abs/2003.06497) "Deep
+Deterministic Portfolio Optimization" where we explore deep reinforcement learning methods
+to solve portfolio optimization problems. More precisely, we consider three tractable cost
+models for which the optimal or approximately optimal solutions are well known in the
+literature. We adapt the Deep Deterministic Policy Gradient (DDPG) algorithm to each of
+these problems to retrieve the corresponding solutions.
+
 
 ## Getting started
 
