@@ -17,30 +17,31 @@ from IPython import display
 from memory import Memory, PrioritizedMemory, Node
 from models import Actor, Critic
 
-Transition = namedtuple('Transition',
-                        ('state', 'action', 'reward', 'next_state', 'dones'))
+Transition = namedtuple(
+    "Transition", ("state", "action", "reward", "next_state", "dones")
+)
 
-GAMMA = 0.99                # discount factor
-TAU_ACTOR = 1e-1            # soft update of the actor target parameters
-TAU_CRITIC = 1e-3           # soft update of critic target parameters
-LR_ACTOR = 1e-4             # learning rate of the actor
-LR_CRITIC = 1e-3            # learning rate of the critic
-WEIGHT_DECAY_actor = 0      # L2 weight decay of the actor
+GAMMA = 0.99  # discount factor
+TAU_ACTOR = 1e-1  # soft update of the actor target parameters
+TAU_CRITIC = 1e-3  # soft update of critic target parameters
+LR_ACTOR = 1e-4  # learning rate of the actor
+LR_CRITIC = 1e-3  # learning rate of the critic
+WEIGHT_DECAY_actor = 0  # L2 weight decay of the actor
 WEIGHT_DECAY_critic = 1e-2  # L2 weight decay of the critic
-BATCH_SIZE = 64             # minibatch size
-BUFFER_SIZE = int(1e6)      # replay buffer size
-PRETRAIN = 64               # number of pretraining steps (must be greater than BATCH_SIZE)  #noqa
-MAX_STEP = 100              # number of steps in an episode
-WEIGHTS = 'weights/'        # path to the repository where to save the models' weights
-FC1_UNITS_ACTOR = 16        # Number of nodes in first hidden layer
-FC2_UNITS_ACTOR = 8         # Number of nodes in second hidden layer
-FC1_UNITS_CRITIC = 64       # Number of nodes in first hidden layer of the critic network
-FC2_UNITS_CRITIC = 32       # Number of nodes in second hidden layer of the critic network
-DECAY_RATE = 0              # Decay rate of the exploration noise
-EXPLORE_STOP = 1e-3         # Final exploration probability
+BATCH_SIZE = 64  # minibatch size
+BUFFER_SIZE = int(1e6)  # replay buffer size
+PRETRAIN = 64  # number of pretraining steps (must be greater than BATCH_SIZE)  #noqa
+MAX_STEP = 100  # number of steps in an episode
+WEIGHTS = "weights/"  # path to the repository where to save the models' weights
+FC1_UNITS_ACTOR = 16  # Number of nodes in first hidden layer
+FC2_UNITS_ACTOR = 8  # Number of nodes in second hidden layer
+FC1_UNITS_CRITIC = 64  # Number of nodes in first hidden layer of the critic network
+FC2_UNITS_CRITIC = 32  # Number of nodes in second hidden layer of the critic network
+DECAY_RATE = 0  # Decay rate of the exploration noise
+EXPLORE_STOP = 1e-3  # Final exploration probability
 
 
-def optimal_f(p, pi, lambd=0.5, psi=0.3, cost='trade_l2'):
+def optimal_f(p, pi, lambd=0.5, psi=0.3, cost="trade_l2"):
     """
     Description
     --------------
@@ -60,21 +61,21 @@ def optimal_f(p, pi, lambd=0.5, psi=0.3, cost='trade_l2'):
     Float, The function evaluation (which is the next trade).
     """
 
-    if cost == 'trade_0':
-        return p/(2*lambd) - pi
+    if cost == "trade_0":
+        return p / (2 * lambd) - pi
 
-    elif cost == 'trade_l2':
-        return p/(2*(lambd + psi)) + psi*pi/(lambd + psi) - pi
+    elif cost == "trade_l2":
+        return p / (2 * (lambd + psi)) + psi * pi / (lambd + psi) - pi
 
-    elif cost == 'trade_l1':
-        if p <= -psi + 2*lambd*pi:
-            return (p + psi)/(2*lambd) - pi
+    elif cost == "trade_l1":
+        if p <= -psi + 2 * lambd * pi:
+            return (p + psi) / (2 * lambd) - pi
 
-        elif -psi + 2*lambd*pi < p < psi + 2*lambd*pi:
+        elif -psi + 2 * lambd * pi < p < psi + 2 * lambd * pi:
             return 0
 
-        elif p >= psi + 2*lambd*pi:
-            return (p - psi)/(2*lambd) - pi
+        elif p >= psi + 2 * lambd * pi:
+            return (p - psi) / (2 * lambd) - pi
 
 
 def optimal_max_pos(p, pi, thresh, max_pos):
@@ -105,9 +106,10 @@ def optimal_max_pos(p, pi, thresh, max_pos):
 
 
 # Vectorizing.
-optimal_f_vec = np.vectorize(optimal_f, excluded=set(['pi', 'lambd', 'psi', 'cost']))
-optimal_max_pos_vec = np.vectorize(optimal_max_pos,
-                                   excluded=set(['pi', 'thresh', 'max_pos']))
+optimal_f_vec = np.vectorize(optimal_f, excluded=set(["pi", "lambd", "psi", "cost"]))
+optimal_max_pos_vec = np.vectorize(
+    optimal_max_pos, excluded=set(["pi", "thresh", "max_pos"])
+)
 
 
 class OUNoise:
@@ -115,7 +117,7 @@ class OUNoise:
     Class of the OU exploration noise.
     """
 
-    def __init__(self, mu=0., theta=.1, sigma=.1):
+    def __init__(self, mu=0.0, theta=0.1, sigma=0.1):
         self.mu = mu
         self.theta = theta
         self.sigma = sigma
@@ -128,25 +130,36 @@ class OUNoise:
         x = self.state
         if truncate:
             from scipy.stats import truncnorm
-            m = -max_pos - position - action - (1 - self.theta)*x
-            M = max_pos - position - action - (1 - self.theta)*x
-            x_a, x_b = m/self.sigma, M/self.sigma
+
+            m = -max_pos - position - action - (1 - self.theta) * x
+            M = max_pos - position - action - (1 - self.theta) * x
+            x_a, x_b = m / self.sigma, M / self.sigma
             X = truncnorm(x_a, x_b, scale=self.sigma)
             dx = self.theta * (self.mu - x) + X.rvs()
             self.state = x + dx
             return self.state
 
         else:
-            dx = self.theta * (self.mu - x) + self.sigma*np.random.randn()
+            dx = self.theta * (self.mu - x) + self.sigma * np.random.randn()
             self.state = x + dx
             return self.state
 
 
 class Agent:
-
-    def __init__(self, gamma=GAMMA, max_size=BUFFER_SIZE, max_step=MAX_STEP,
-                 memory_type='uniform', alpha=0.6, beta0=0.4, epsilon=1e-8,
-                 sliding='oldest', batch_size=BATCH_SIZE, theta=1., sigma=1.):
+    def __init__(
+        self,
+        gamma=GAMMA,
+        max_size=BUFFER_SIZE,
+        max_step=MAX_STEP,
+        memory_type="uniform",
+        alpha=0.6,
+        beta0=0.4,
+        epsilon=1e-8,
+        sliding="oldest",
+        batch_size=BATCH_SIZE,
+        theta=1.0,
+        sigma=1.0,
+    ):
         """
         Description
         -------------
@@ -179,18 +192,21 @@ class Agent:
 
         """
 
-        assert (0 <= gamma <= 1), 'Discount factor gamma must be in [0, 1]'
-        assert (memory_type in ['uniform', 'prioritized', 'per_intervals']
-                ), "memory must be in ['uniform', 'prioritized']"
+        assert 0 <= gamma <= 1, "Discount factor gamma must be in [0, 1]"
+        assert memory_type in [
+            "uniform",
+            "prioritized",
+            "per_intervals",
+        ], "memory must be in ['uniform', 'prioritized']"
         self.gamma = gamma
         self.max_size = max_size
         self.memory_type = memory_type
         self.epsilon = epsilon
 
-        if memory_type == 'uniform':
+        if memory_type == "uniform":
             self.memory = Memory(max_size=max_size)
 
-        elif memory_type == 'prioritized':
+        elif memory_type == "prioritized":
             self.memory = PrioritizedMemory(max_size=max_size, sliding=sliding)
 
         self.max_step = max_step
@@ -251,17 +267,23 @@ class Agent:
         next_state_mb = torch.tensor([next_state], dtype=torch.float)
         not_done_mb = torch.tensor([[not done]], dtype=torch.float)
 
-        if self.memory_type == 'uniform':
-            self.memory.add((state_mb, action_mb, reward_mb, next_state_mb, not_done_mb))
+        if self.memory_type == "uniform":
+            self.memory.add(
+                (state_mb, action_mb, reward_mb, next_state_mb, not_done_mb)
+            )
 
         # During pretraining, the just initialized critic network is likely to output
         # near 0 values, so we will assume the TD error to be equal to the reward.
-        elif self.memory_type == 'prioritized':
-            priority = ((abs(reward) + self.epsilon)**self.alpha if pretrain
-                        else self.memory.highest_priority())
+        elif self.memory_type == "prioritized":
+            priority = (
+                (abs(reward) + self.epsilon) ** self.alpha
+                if pretrain
+                else self.memory.highest_priority()
+            )
             # Add (transition, leaf) to the buffer.
-            self.memory.add((state_mb, action_mb, reward_mb, next_state_mb, not_done_mb),
-                            priority)
+            self.memory.add(
+                (state_mb, action_mb, reward_mb, next_state_mb, not_done_mb), priority
+            )
 
     def act(self, state, noise=True, explore_probability=1, truncate=False, max_pos=2):
         """
@@ -295,8 +317,12 @@ class Agent:
         self.actor_local.train()
         if noise:
             noise_sample = self.noise.sample(
-                truncate=truncate, max_pos=max_pos, position=position, action=float(action))
-            action += explore_probability*noise_sample
+                truncate=truncate,
+                max_pos=max_pos,
+                position=position,
+                action=float(action),
+            )
+            action += explore_probability * noise_sample
 
         return float(action)
 
@@ -319,9 +345,12 @@ class Agent:
         Float, the clipped action to be taken (a.k.a the new position).
         """
 
-        for target_param, local_param in zip(target_model.parameters(),
-                                             local_model.parameters()):
-            target_param.data.copy_(tau*local_param.data + (1.0 - tau)*target_param.data)
+        for target_param, local_param in zip(
+            target_model.parameters(), local_model.parameters()
+        ):
+            target_param.data.copy_(
+                tau * local_param.data + (1.0 - tau) * target_param.data
+            )
 
     def pretrain(self, env, total_steps=PRETRAIN):
         """
@@ -342,8 +371,9 @@ class Agent:
         with torch.no_grad():
             for i in range(total_steps):
                 state = env.get_state()
-                action = self.act(state, truncate=(not env.squared_risk),
-                                  max_pos=env.max_pos)
+                action = self.act(
+                    state, truncate=(not env.squared_risk), max_pos=env.max_pos
+                )
                 reward = env.step(action)
                 next_state = env.get_state()
                 done = env.done
@@ -351,16 +381,36 @@ class Agent:
                 if done:
                     env.reset()
 
-    def train(self, env, total_episodes=100, tau_actor=TAU_ACTOR, tau_critic=TAU_CRITIC,
-              lr_actor=LR_ACTOR, lr_critic=LR_CRITIC,
-              weight_decay_actor=WEIGHT_DECAY_actor,
-              weight_decay_critic=WEIGHT_DECAY_critic, total_steps=PRETRAIN,
-              weights=WEIGHTS, freq=50, fc1_units_actor=FC1_UNITS_ACTOR,
-              fc2_units_actor=FC2_UNITS_ACTOR, fc1_units_critic=FC1_UNITS_CRITIC,
-              fc2_units_critic=FC2_UNITS_CRITIC, decay_rate=DECAY_RATE,
-              explore_stop=EXPLORE_STOP, tensordir='runs/', learn_freq=50, plots=False,
-              pi=0.5, lambd=None, psi=None, phi=None, thresh=3, mile=50,
-              progress='tqdm_notebook'):
+    def train(
+        self,
+        env,
+        total_episodes=100,
+        tau_actor=TAU_ACTOR,
+        tau_critic=TAU_CRITIC,
+        lr_actor=LR_ACTOR,
+        lr_critic=LR_CRITIC,
+        weight_decay_actor=WEIGHT_DECAY_actor,
+        weight_decay_critic=WEIGHT_DECAY_critic,
+        total_steps=PRETRAIN,
+        weights=WEIGHTS,
+        freq=50,
+        fc1_units_actor=FC1_UNITS_ACTOR,
+        fc2_units_actor=FC2_UNITS_ACTOR,
+        fc1_units_critic=FC1_UNITS_CRITIC,
+        fc2_units_critic=FC2_UNITS_CRITIC,
+        decay_rate=DECAY_RATE,
+        explore_stop=EXPLORE_STOP,
+        tensordir="runs/",
+        learn_freq=50,
+        plots=False,
+        pi=0.5,
+        lambd=None,
+        psi=None,
+        phi=None,
+        thresh=3,
+        mile=50,
+        progress="tqdm_notebook",
+    ):
         """
         Description
         -------------
@@ -426,13 +476,16 @@ class Agent:
             range_values = np.arange(-4, 4, 0.01)
             signal_zeros = torch.tensor(
                 np.vstack((range_values, np.zeros(len(range_values)))).T,
-                dtype=torch.float)
+                dtype=torch.float,
+            )
             signal_ones_pos = torch.tensor(
-                np.vstack((range_values, 0.5*np.ones(len(range_values)))).T,
-                dtype=torch.float)
+                np.vstack((range_values, 0.5 * np.ones(len(range_values)))).T,
+                dtype=torch.float,
+            )
             signal_ones_neg = torch.tensor(
-                np.vstack((range_values, -0.5*np.ones(len(range_values)))).T,
-                dtype=torch.float)
+                np.vstack((range_values, -0.5 * np.ones(len(range_values)))).T,
+                dtype=torch.float,
+            )
             if psi is None:
                 psi = env.psi
 
@@ -440,47 +493,71 @@ class Agent:
                 lambd = env.lambd
 
             if env.squared_risk:
-                result1 = optimal_f_vec(signal_ones_neg[:, 0].numpy(
-                ), -pi, lambd=lambd, psi=psi, cost=env.cost)
+                result1 = optimal_f_vec(
+                    signal_ones_neg[:, 0].numpy(),
+                    -pi,
+                    lambd=lambd,
+                    psi=psi,
+                    cost=env.cost,
+                )
                 result2 = optimal_f_vec(
-                    signal_zeros[:, 0].numpy(), 0, lambd=lambd, psi=psi, cost=env.cost)
-                result3 = optimal_f_vec(signal_ones_pos[:, 0].numpy(
-                ), pi, lambd=lambd, psi=psi, cost=env.cost)
+                    signal_zeros[:, 0].numpy(), 0, lambd=lambd, psi=psi, cost=env.cost
+                )
+                result3 = optimal_f_vec(
+                    signal_ones_pos[:, 0].numpy(),
+                    pi,
+                    lambd=lambd,
+                    psi=psi,
+                    cost=env.cost,
+                )
 
             else:
                 result1 = optimal_max_pos_vec(
-                    signal_ones_neg[:, 0].numpy(), -pi, thresh, env.max_pos)
-                result2 = optimal_max_pos_vec(signal_zeros[:, 0].numpy(), 0, thresh,
-                                              env.max_pos)
+                    signal_ones_neg[:, 0].numpy(), -pi, thresh, env.max_pos
+                )
+                result2 = optimal_max_pos_vec(
+                    signal_zeros[:, 0].numpy(), 0, thresh, env.max_pos
+                )
                 result3 = optimal_max_pos_vec(
-                    signal_ones_pos[:, 0].numpy(), pi, thresh, env.max_pos)
+                    signal_ones_pos[:, 0].numpy(), pi, thresh, env.max_pos
+                )
 
         # Define Actor local and target networks
-        self.actor_local = Actor(env.state_size, fc1_units=fc1_units_actor,
-                                 fc2_units=fc2_units_actor)
-        self.actor_target = Actor(env.state_size, fc1_units=fc1_units_actor,
-                                  fc2_units=fc2_units_actor)
+        self.actor_local = Actor(
+            env.state_size, fc1_units=fc1_units_actor, fc2_units=fc2_units_actor
+        )
+        self.actor_target = Actor(
+            env.state_size, fc1_units=fc1_units_actor, fc2_units=fc2_units_actor
+        )
 
         # Define the optimizer and its learning rate scheduler for the Actor networks
-        actor_optimizer = optim.Adam(self.actor_local.parameters(),
-                                     lr=lr_actor, weight_decay=weight_decay_actor)
-        actor_lr_scheduler = lr_scheduler.StepLR(actor_optimizer, step_size=mile*100,
-                                                 gamma=0.5)
+        actor_optimizer = optim.Adam(
+            self.actor_local.parameters(), lr=lr_actor, weight_decay=weight_decay_actor
+        )
+        actor_lr_scheduler = lr_scheduler.StepLR(
+            actor_optimizer, step_size=mile * 100, gamma=0.5
+        )
 
         # Define Actor local and target networks
         self.critic_local = Critic(
-            env.state_size, fcs1_units=fc1_units_critic, fc2_units=fc2_units_critic)
+            env.state_size, fcs1_units=fc1_units_critic, fc2_units=fc2_units_critic
+        )
         self.critic_target = Critic(
-            env.state_size, fcs1_units=fc1_units_critic, fc2_units=fc2_units_critic)
+            env.state_size, fcs1_units=fc1_units_critic, fc2_units=fc2_units_critic
+        )
 
         # Define the optimizer and its learning rate scheduler for the Critic networks
-        critic_optimizer = optim.Adam(self.critic_local.parameters(),
-                                      lr=lr_critic, weight_decay=weight_decay_critic)
-        critic_lr_scheduler = lr_scheduler.StepLR(critic_optimizer, step_size=mile*100,
-                                                  gamma=0.5)
+        critic_optimizer = optim.Adam(
+            self.critic_local.parameters(),
+            lr=lr_critic,
+            weight_decay=weight_decay_critic,
+        )
+        critic_lr_scheduler = lr_scheduler.StepLR(
+            critic_optimizer, step_size=mile * 100, gamma=0.5
+        )
 
         # Save the initialized model
-        model_file = weights + 'ddpg_1' + '.pth'
+        model_file = weights + "ddpg_1" + ".pth"
         torch.save(self.actor_local.state_dict(), model_file)
         # print('\nSaved model to ' + model_file + '\n')
 
@@ -498,19 +575,21 @@ class Agent:
         self.pretrain(env, total_steps=total_steps)
         i = 0
         # exploration_probability = 1
-        N_train = total_episodes*env.T//learn_freq
+        N_train = total_episodes * env.T // learn_freq
         beta = self.beta0
         self.reset()
         n_train = 0
 
         range_total_episodes = range(total_episodes)
         # setup progress bar
-        if progress == 'tqdm_notebook':
+        if progress == "tqdm_notebook":
             from tqdm import tqdm_notebook
+
             range_total_episodes = tqdm_notebook(list(range_total_episodes))
             progress_bar = range_total_episodes
-        elif progress == 'tqdm':
+        elif progress == "tqdm":
             from tqdm import tqdm
+
             range_total_episodes = tqdm(list(range_total_episodes))
             progress_bar = range_total_episodes
         else:
@@ -525,15 +604,19 @@ class Agent:
             train_iter = 0
             # Environment Exploration phase
             while not done:
-                explore_probability = (explore_stop
-                                       + (1 - explore_stop)*np.exp(-decay_rate*i))
-                action = self.act(state, truncate=(not env.squared_risk),
-                                  max_pos=env.max_pos,
-                                  explore_probability=explore_probability)
+                explore_probability = explore_stop + (1 - explore_stop) * np.exp(
+                    -decay_rate * i
+                )
+                action = self.act(
+                    state,
+                    truncate=(not env.squared_risk),
+                    max_pos=env.max_pos,
+                    explore_probability=explore_probability,
+                )
                 reward = env.step(action)
-                writer.add_scalar('State/signal', state[0], i)
-                writer.add_scalar('Signal/position', state[1], i)
-                writer.add_scalar('Signal/action', action, i)
+                writer.add_scalar("State/signal", state[0], i)
+                writer.add_scalar("Signal/position", state[1], i)
+                writer.add_scalar("Signal/action", action, i)
                 next_state = env.get_state()
                 done = env.done
                 self.step(state, action, reward, next_state, done)
@@ -548,16 +631,18 @@ class Agent:
                     if (episode > 0) and (episode % 5 == 0):
                         mean_r = np.mean(mean_rewards)
                         cum_rewards.append(mean_r)
-                        writer.add_scalar('Reward & Loss/reward', mean_r, episode)
-                        writer.add_scalar('Reward & Loss/actor_loss',
-                                          np.mean(actor_losses), episode)
-                        writer.add_scalar('Reward & Loss/critic_loss',
-                                          np.mean(critic_losses), episode)
+                        writer.add_scalar("Reward & Loss/reward", mean_r, episode)
+                        writer.add_scalar(
+                            "Reward & Loss/actor_loss", np.mean(actor_losses), episode
+                        )
+                        writer.add_scalar(
+                            "Reward & Loss/critic_loss", np.mean(critic_losses), episode
+                        )
 
                 # Learning phase
                 if train_iter % learn_freq == 0:
                     n_train += 1
-                    if self.memory_type == 'uniform':
+                    if self.memory_type == "uniform":
                         # Sample a batch of experiences :
                         # (state, action, reward, next_state, done)
                         transitions = self.memory.sample(self.batch_size)
@@ -568,7 +653,7 @@ class Agent:
                         next_states_mb = torch.cat(batch.next_state)
                         dones_mb = torch.cat(batch.dones)
 
-                    elif self.memory_type == 'prioritized':
+                    elif self.memory_type == "prioritized":
                         # Sample a batch of experiences :
                         # (state, action, reward, next_state, done)
                         transitions, indices = self.memory.sample(self.batch_size)
@@ -586,40 +671,46 @@ class Agent:
                     # Use target Critic to compute the Q values of the sampled
                     # (next_states, actions)
                     Q_targets_next = self.critic_target(next_states_mb, actions_next)
-                    Q_targets = rewards_mb + (self.gamma*Q_targets_next *
-                                              dones_mb)       # Compute target Q values
+                    Q_targets = rewards_mb + (
+                        self.gamma * Q_targets_next * dones_mb
+                    )  # Compute target Q values
                     # Compute expected Q values with the local Critic network
                     Q_expected = self.critic_local(states_mb, actions_mb)
                     # Compute the TD errors (needed to update priorities when using
                     # Prioritized replay, and also to compute the loss)
-                    td_errors = F.l1_loss(Q_expected, Q_targets, reduction='none')
+                    td_errors = F.l1_loss(Q_expected, Q_targets, reduction="none")
                     # Update the priorities of experiences in the sampled batch when
                     # Prioritized Experience Replay is used
-                    if self.memory_type == 'prioritized':
+                    if self.memory_type == "prioritized":
                         # Sum of all priorities.
                         sum_priorities = self.memory.sum_priorities()
                         # Sampling probabilities.
-                        probabilities = (self.memory.retrieve_priorities(
-                            indices)/sum_priorities).reshape((-1, 1))
+                        probabilities = (
+                            self.memory.retrieve_priorities(indices) / sum_priorities
+                        ).reshape((-1, 1))
                         # Importance sampling weights.
                         is_weights = torch.tensor(
-                            1/((self.max_size*probabilities)**beta), dtype=torch.float)
+                            1 / ((self.max_size * probabilities) ** beta),
+                            dtype=torch.float,
+                        )
                         # Normalize the importance sampling weights.
                         is_weights /= is_weights.max()
                         # Update parameter beta.
-                        beta = (1 - self.beta0)*(n_train/N_train) + self.beta0
+                        beta = (1 - self.beta0) * (n_train / N_train) + self.beta0
                         for i_enum, index in enumerate(indices):
                             # Update the priorities of the sampled experiences.
-                            self.memory.update(index,
-                                               (abs(float(td_errors[i_enum].data))
-                                                + self.epsilon)**self.alpha)
+                            self.memory.update(
+                                index,
+                                (abs(float(td_errors[i_enum].data)) + self.epsilon)
+                                ** self.alpha,
+                            )
 
                         # Compute Critic loss function with bias correction.
-                        critic_loss = (is_weights*(td_errors**2)).mean()/2
+                        critic_loss = (is_weights * (td_errors ** 2)).mean() / 2
 
-                    elif self.memory_type == 'uniform':
+                    elif self.memory_type == "uniform":
                         # Compute Critic loss function.
-                        critic_loss = (td_errors**2).mean()/2
+                        critic_loss = (td_errors ** 2).mean() / 2
 
                     # Store the current Critic loss value.
                     critic_losses.append(critic_loss.data.item())
@@ -660,25 +751,34 @@ class Agent:
                 self.actor_local.eval()
                 with torch.no_grad():
                     plt.subplot(2, 3, 1)
-                    plt.plot(signal_ones_neg[:, 0].numpy(), self.actor_local(
-                        signal_ones_neg)[:, 0].data.numpy(), label='model')
-                    plt.plot(signal_ones_neg[:, 0].numpy(), result1, label='optimal')
+                    plt.plot(
+                        signal_ones_neg[:, 0].numpy(),
+                        self.actor_local(signal_ones_neg)[:, 0].data.numpy(),
+                        label="model",
+                    )
+                    plt.plot(signal_ones_neg[:, 0].numpy(), result1, label="optimal")
                     plt.xlim(-4, 4)
                     plt.ylim(-4, 4)
                     plt.legend()
 
                     plt.subplot(2, 3, 2)
-                    plt.plot(signal_zeros[:, 0].numpy(), self.actor_local(
-                        signal_zeros)[:, 0].data.numpy(), label='model')
-                    plt.plot(signal_zeros[:, 0].numpy(), result2, label='optimal')
+                    plt.plot(
+                        signal_zeros[:, 0].numpy(),
+                        self.actor_local(signal_zeros)[:, 0].data.numpy(),
+                        label="model",
+                    )
+                    plt.plot(signal_zeros[:, 0].numpy(), result2, label="optimal")
                     plt.xlim(-4, 4)
                     plt.ylim(-4, 4)
                     plt.legend()
 
                     plt.subplot(2, 3, 3)
-                    plt.plot(signal_ones_pos[:, 0].numpy(), self.actor_local(
-                        signal_ones_pos)[:, 0].data.numpy(), label='model')
-                    plt.plot(signal_ones_pos[:, 0].numpy(), result3, label='optimal')
+                    plt.plot(
+                        signal_ones_pos[:, 0].numpy(),
+                        self.actor_local(signal_ones_pos)[:, 0].data.numpy(),
+                        label="model",
+                    )
+                    plt.plot(signal_ones_pos[:, 0].numpy(), result3, label="optimal")
                     plt.xlim(-4, 4)
                     plt.ylim(-4, 4)
                     plt.legend()
@@ -695,7 +795,7 @@ class Agent:
 
             # Save the Actor network weights after a number of episodes each time
             if (episode % freq) == 0:
-                model_file = weights + 'ddpg_' + str(episode) + '.pth'
+                model_file = weights + "ddpg_" + str(episode) + ".pth"
                 torch.save(self.actor_local.state_dict(), model_file)
                 # print('\nSaved model to ' + model_file + '\n')
 

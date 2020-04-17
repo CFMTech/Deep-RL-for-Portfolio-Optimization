@@ -13,10 +13,26 @@ class Environment:
     The signal is built as an OU process.
     """
 
-    def __init__(self, sigma=0.5, theta=1., T=1000, random_state=None, lambd=0.5, psi=0.5,
-                 cost='trade_0', max_pos=10, squared_risk=True, penalty='none', alpha=10,
-                 beta=10, clip=True, noise=False, noise_std=10, noise_seed=None,
-                 scale_reward=10):
+    def __init__(
+        self,
+        sigma=0.5,
+        theta=1.0,
+        T=1000,
+        random_state=None,
+        lambd=0.5,
+        psi=0.5,
+        cost="trade_0",
+        max_pos=10,
+        squared_risk=True,
+        penalty="none",
+        alpha=10,
+        beta=10,
+        clip=True,
+        noise=False,
+        noise_std=10,
+        noise_seed=None,
+        scale_reward=10,
+    ):
         """
         Description
         ---------------
@@ -82,7 +98,7 @@ class Environment:
         self.signal = build_ou_process(T, sigma, theta, random_state)
         self.it = 0  # First iteration is 0
         self.pi = 0
-        self.p = self.signal[self.it+1]
+        self.p = self.signal[self.it + 1]
         self.state = (self.p, self.pi)
         self.done = False
         self.state_size = len(self.state)
@@ -126,7 +142,7 @@ class Environment:
         self.signal = build_ou_process(self.T, self.sigma, self.theta, random_state)
         self.it = 0  # First iteration is 0
         self.pi = 0
-        self.p = self.signal[self.it+1]
+        self.p = self.signal[self.it + 1]
         self.state = (self.p, self.pi)
         self.done = False
         if self.noise:
@@ -169,9 +185,10 @@ class Environment:
         Float, the reward we get by applying action to the current state.
         """
 
-        assert (not self.done), (
+        assert not self.done, (
             "The episode is over, you cannot take another step! "
-            "Please reset the environment.")
+            "Please reset the environment."
+        )
         pi_next_unclipped = self.pi + action
         if self.clip:
             # Clip the next position between -max_pos and max_pos
@@ -180,56 +197,74 @@ class Environment:
         else:
             pi_next = self.pi + action
 
-        if self.penalty == 'none':
+        if self.penalty == "none":
             pen = 0
 
-        if self.penalty == 'constant':
-            pen = self.alpha*max(0, (self.max_pos-pi_next)/abs(self.max_pos-pi_next),
-                                 (-self.max_pos-pi_next)/abs(-self.max_pos-pi_next))
-
-        elif self.penalty == 'tanh':
-            pen = (
-                self.beta
-                * (np.tanh(self.alpha*(abs(pi_next_unclipped) - 5*self.max_pos/4)) + 1)
+        if self.penalty == "constant":
+            pen = self.alpha * max(
+                0,
+                (self.max_pos - pi_next) / abs(self.max_pos - pi_next),
+                (-self.max_pos - pi_next) / abs(-self.max_pos - pi_next),
             )
 
-        elif self.penalty == 'exp':
-            pen = self.beta*np.exp(self.alpha*(abs(pi_next) - self.max_pos))
+        elif self.penalty == "tanh":
+            pen = self.beta * (
+                np.tanh(self.alpha * (abs(pi_next_unclipped) - 5 * self.max_pos / 4))
+                + 1
+            )
 
-        if self.cost == 'trade_0':
-            reward = (self.p*pi_next - self.lambd*pi_next**2 *
-                      self.squared_risk - pen)/self.scale_reward
+        elif self.penalty == "exp":
+            pen = self.beta * np.exp(self.alpha * (abs(pi_next) - self.max_pos))
 
-        elif self.cost == 'trade_l1':
+        if self.cost == "trade_0":
+            reward = (
+                self.p * pi_next - self.lambd * pi_next ** 2 * self.squared_risk - pen
+            ) / self.scale_reward
+
+        elif self.cost == "trade_l1":
             if self.noise:
                 reward = (
-                    ((self.p + self.noise_array[self.it])*pi_next - self.lambd*pi_next **
-                     2*self.squared_risk - self.psi*abs(pi_next - self.pi) - pen)
-                    / self.scale_reward)
+                    (self.p + self.noise_array[self.it]) * pi_next
+                    - self.lambd * pi_next ** 2 * self.squared_risk
+                    - self.psi * abs(pi_next - self.pi)
+                    - pen
+                ) / self.scale_reward
 
             else:
-                reward = (self.p*pi_next - self.lambd*pi_next**2*self.squared_risk -
-                          self.psi*abs(pi_next - self.pi) - pen)/self.scale_reward
+                reward = (
+                    self.p * pi_next
+                    - self.lambd * pi_next ** 2 * self.squared_risk
+                    - self.psi * abs(pi_next - self.pi)
+                    - pen
+                ) / self.scale_reward
 
-        elif self.cost == 'trade_l2':
+        elif self.cost == "trade_l2":
             if self.noise:
                 reward = (
-                    ((self.p + self.noise_array[self.it])*pi_next - self.lambd*pi_next **
-                     2 * self.squared_risk - self.psi*(pi_next - self.pi)**2 - pen)
-                    / self.scale_reward)
+                    (self.p + self.noise_array[self.it]) * pi_next
+                    - self.lambd * pi_next ** 2 * self.squared_risk
+                    - self.psi * (pi_next - self.pi) ** 2
+                    - pen
+                ) / self.scale_reward
 
             else:
-                reward = (self.p*pi_next - self.lambd*pi_next**2*self.squared_risk -
-                          self.psi*(pi_next - self.pi)**2 - pen)/self.scale_reward
+                reward = (
+                    self.p * pi_next
+                    - self.lambd * pi_next ** 2 * self.squared_risk
+                    - self.psi * (pi_next - self.pi) ** 2
+                    - pen
+                ) / self.scale_reward
 
         self.pi = pi_next
         self.it += 1
-        self.p = self.signal[self.it+1]
+        self.p = self.signal[self.it + 1]
         self.state = (self.p, self.pi)
-        self.done = (self.it == (len(self.signal)-2))
+        self.done = self.it == (len(self.signal) - 2)
         return reward
 
-    def test(self, agent, model, total_episodes=10, random_states=None, noise_seeds=None):
+    def test(
+        self, agent, model, total_episodes=10, random_states=None, noise_seeds=None
+    ):
         """
         Description
         ---------------
@@ -264,8 +299,9 @@ class Environment:
         positions = {}
         agent.actor_local = model
         if random_states is not None:
-            assert (total_episodes == len(random_states)
-                    ), "random_states should be a list of length total_episodes!"
+            assert total_episodes == len(
+                random_states
+            ), "random_states should be a list of length total_episodes!"
 
         cumulative_rewards = []
         cumulative_pnls = []
@@ -283,7 +319,7 @@ class Environment:
                 pi_next = np.clip(self.pi + action, -self.max_pos, self.max_pos)
                 episode_positions.append(pi_next)
                 reward = self.step(action)
-                pnl = reward + (self.lambd*self.pi**2)*self.squared_risk
+                pnl = reward + (self.lambd * self.pi ** 2) * self.squared_risk
                 state = self.get_state()
                 done = self.done
                 episode_rewards.append(reward)
@@ -293,7 +329,9 @@ class Environment:
                     total_pnl = np.sum(episode_pnls)
                     if random_states is not None:
                         scores[random_states[episode]] = total_reward
-                        scores_cumsum[random_states[episode]] = np.cumsum(episode_rewards)
+                        scores_cumsum[random_states[episode]] = np.cumsum(
+                            episode_rewards
+                        )
                         pnls[random_states[episode]] = total_pnl
                         positions[random_states[episode]] = episode_positions
 
@@ -302,8 +340,13 @@ class Environment:
                     # print('Episode: {}'.format(episode),
                     #      'Total reward: {:.2f}'.format(total_reward))
 
-        return (np.mean(cumulative_rewards), scores, scores_cumsum,
-                np.mean(cumulative_pnls), positions)
+        return (
+            np.mean(cumulative_rewards),
+            scores,
+            scores_cumsum,
+            np.mean(cumulative_pnls),
+            positions,
+        )
 
     def apply(self, state, thresh=1, lambd=None, psi=None):
         """
@@ -340,22 +383,31 @@ class Environment:
                 return -self.max_pos - pi
 
         else:
-            if self.cost == 'trade_0':
-                return p/(2*lambd) - pi
+            if self.cost == "trade_0":
+                return p / (2 * lambd) - pi
 
-            elif self.cost == 'trade_l2':
-                return (p + 2*psi*pi)/(2*(lambd + psi)) - pi
+            elif self.cost == "trade_l2":
+                return (p + 2 * psi * pi) / (2 * (lambd + psi)) - pi
 
-            elif self.cost == 'trade_l1':
-                if p < -psi + 2*lambd*pi:
-                    return (p + psi)/(2*lambd) - pi
-                elif -psi + 2*lambd*pi <= p <= psi + 2*lambd*pi:
+            elif self.cost == "trade_l1":
+                if p < -psi + 2 * lambd * pi:
+                    return (p + psi) / (2 * lambd) - pi
+                elif -psi + 2 * lambd * pi <= p <= psi + 2 * lambd * pi:
                     return 0
-                elif p > psi + 2*lambd*pi:
-                    return (p - psi)/(2*lambd) - pi
+                elif p > psi + 2 * lambd * pi:
+                    return (p - psi) / (2 * lambd) - pi
 
-    def test_apply(self, total_episodes=10, random_states=None, thresh=1, lambd=None,
-                   psi=None, noise_seeds=None, max_point=6., n_points=1000):
+    def test_apply(
+        self,
+        total_episodes=10,
+        random_states=None,
+        thresh=1,
+        lambd=None,
+        psi=None,
+        noise_seeds=None,
+        max_point=6.0,
+        n_points=1000,
+    ):
         """
         Description
         ---------------
@@ -391,8 +443,9 @@ class Environment:
         pnls = {}
         positions = {}
         if random_states is not None:
-            assert (total_episodes == len(random_states)
-                    ), "random_states should be a list of length total_episodes!"
+            assert total_episodes == len(
+                random_states
+            ), "random_states should be a list of length total_episodes!"
 
         cumulative_rewards = []
         cumulative_pnls = []
@@ -408,7 +461,7 @@ class Environment:
             while not done:
                 action = self.apply(state, thresh=thresh, lambd=lambd, psi=psi)
                 reward = self.step(action)
-                pnl = reward + (self.lambd*self.pi**2)*self.squared_risk
+                pnl = reward + (self.lambd * self.pi ** 2) * self.squared_risk
                 state = self.get_state()
                 done = self.done
                 episode_rewards.append(reward)
@@ -419,7 +472,9 @@ class Environment:
                     total_pnl = np.sum(episode_pnls)
                     if random_states is not None:
                         scores[random_states[episode]] = total_reward
-                        scores_cumsum[random_states[episode]] = np.cumsum(episode_rewards)
+                        scores_cumsum[random_states[episode]] = np.cumsum(
+                            episode_rewards
+                        )
                         pnls[random_states[episode]] = episode_pnls
                         positions[random_states[episode]] = episode_positions
 
@@ -428,5 +483,10 @@ class Environment:
                     # print('Episode: {}'.format(episode),
                     #       'Total reward: {:.2f}'.format(total_reward))
 
-        return (np.mean(cumulative_rewards), scores, scores_cumsum,
-                np.mean(cumulative_pnls), positions)
+        return (
+            np.mean(cumulative_rewards),
+            scores,
+            scores_cumsum,
+            np.mean(cumulative_pnls),
+            positions,
+        )

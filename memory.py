@@ -62,9 +62,18 @@ class Node:
     # Storing the index will help us deal with the reaplay buffer when it gets saturated.
     saturated = False  # This boolean will turn True when Node.count >= max_size
 
-    def __init__(self, max_size, index_heap=None, l_child=None, r_child=None,
-                 children_heap=[], parent=None, parent_heap=None, value=0.,
-                 sliding='oldest'):
+    def __init__(
+        self,
+        max_size,
+        index_heap=None,
+        l_child=None,
+        r_child=None,
+        children_heap=[],
+        parent=None,
+        parent_heap=None,
+        value=0.0,
+        sliding="oldest",
+    ):
         """
         Description
         ------------------------
@@ -111,8 +120,8 @@ class Node:
         self.parent = parent
         self.parent_heap = parent_heap
         self.value = value
-        self.leaf = ((l_child is None) & (r_child is None))
-        self.leaf_heap = (len(children_heap) == 0)
+        self.leaf = (l_child is None) & (r_child is None)
+        self.leaf_heap = len(children_heap) == 0
         self.complete = False
         if self.leaf:
             # Set the leaf index to class attribute count.
@@ -121,7 +130,7 @@ class Node:
             Node.count += 1
             self.level = 0  # Level 0 because it is a leaf.
             # Update class attribute count (tree saturation status).
-            Node.saturated = (Node.count >= self.max_size)
+            Node.saturated = Node.count >= self.max_size
 
         elif self.r_child is None:
             # Every node that is not a leaf has at least a left child, in case it does not
@@ -135,7 +144,7 @@ class Node:
             # by adding new leaves, this node will eventually have its children change
             # until reaching the mentioned minimum level.
             self.level = min(self.l_child.level, self.r_child.level) + 1
-            self.complete = (self.l_child.level == self.r_child.level)
+            self.complete = self.l_child.level == self.r_child.level
 
     def reset_count():
         """
@@ -166,12 +175,12 @@ class Node:
         ------------------------
         """
 
-        assert (not self.leaf), 'Do not update the status of a leaf'
+        assert not self.leaf, "Do not update the status of a leaf"
         if self.r_child is None:
             pass
 
         else:
-            self.complete = (self.l_child.level == self.r_child.level)
+            self.complete = self.l_child.level == self.r_child.level
 
     def update_level(self):
         """
@@ -247,7 +256,7 @@ class Node:
         ------------------------
         """
 
-        self.leaf_heap = (len(self.children_heap) == 0)
+        self.leaf_heap = len(self.children_heap) == 0
 
     def set_l_child(self, l_child):
         """
@@ -318,9 +327,10 @@ class Node:
         ------------------------
         """
 
-        assert (child_origin in self.children_heap), (
+        assert child_origin in self.children_heap, (
             "The child you want to replace does not belong to "
-            "the children of current node!")
+            "the children of current node!"
+        )
         for i, child in enumerate(self.children_heap):
             if child == child_origin:
                 self.children_heap[i] = child_new
@@ -344,9 +354,10 @@ class Node:
         ------------------------
         """
 
-        assert (len(self.children_heap) < 2), (
+        assert len(self.children_heap) < 2, (
             "The node has already 2 children, "
-            "you cannot add a child, consider replacing operation.")
+            "you cannot add a child, consider replacing operation."
+        )
         self.children_heap.append(child)
         self.children_heap.sort(reverse=True)
         child.set_parent_heap(self)
@@ -457,7 +468,6 @@ retrieve_value_vec = np.vectorize(retrieve_value)
 
 
 class Heap:
-
     def __init__(self):
         """
         Description
@@ -493,7 +503,10 @@ class Heap:
         # make the suitable exchanges and also the parent's parent to replace parent in
         # its children by child.
         child_children_heap, parent_children_heap, grand_parent = (
-            child.children_heap, parent.children_heap, parent.parent_heap)
+            child.children_heap,
+            parent.children_heap,
+            parent.parent_heap,
+        )
         # Swap the indices of child and parent in the heap.
         child_index_heap, parent_index_heap = child.index_heap, parent.index_heap
         child.set_index_heap(parent_index_heap)
@@ -612,13 +625,12 @@ class Heap:
             self.root = node
 
         else:
-            parent = self.track[(node.index_heap - 1)//2]
+            parent = self.track[(node.index_heap - 1) // 2]
             parent.add_child_heap(node)
             # changed = self.sift_up(node)
 
 
 class SumTree:
-
     def __init__(self, max_size):
         """
         Description
@@ -685,7 +697,7 @@ class SumTree:
                 self.children[-1].parent = self.parents[-1]
                 # Update the attributes of the last parent.
                 self.parents[-1].update()
-                while (self.parents[-1].complete):
+                while self.parents[-1].complete:
                     # Collapsing loop
                     node = self.parents.pop()  # Pop the last parent node.
                     self.children.pop()  # Pop the last child.
@@ -712,13 +724,13 @@ class SumTree:
                 if len(self.parents) >= 2:
                     for i in range(-2, -len(self.parents), -1):
                         # Set the left child as we did before in the collapsing loop.
-                        self.parents[i].l_child = self.children[i-1]
+                        self.parents[i].l_child = self.children[i - 1]
                         # Set the corresponding parent.
-                        self.children[i-1].parent = self.parents[i]
+                        self.children[i - 1].parent = self.parents[i]
                         # Set the right child to the next parent this time.
-                        self.parents[i].r_child = self.parents[i+1]
+                        self.parents[i].r_child = self.parents[i + 1]
                         # Set the corresponding parent.
-                        self.parents[i+1].parent = self.parents[i]
+                        self.parents[i + 1].parent = self.parents[i]
                         # Update the attributes of the last parent.
                         self.parents[i].update()
 
@@ -751,7 +763,9 @@ class SumTree:
             elif len(self.parents) == 1:
                 # Set the right child to the first child (the only child at this point).
                 self.parents[0].r_child = self.children[0]
-                self.children[0].parent = self.parents[0]  # Set the corresponding parent.
+                self.children[0].parent = self.parents[
+                    0
+                ]  # Set the corresponding parent.
                 self.parents[0].update()
                 # Check if we can collapse the root.
                 if self.parents[0].complete:
@@ -822,7 +836,9 @@ class SumTree:
 # def retrieve_first(couple):
 #    return couple[0]
 
-def retrieve_first(couple): return couple[0]
+
+def retrieve_first(couple):
+    return couple[0]
 
 
 retrieve_first_vec = np.vectorize(retrieve_first)
@@ -833,7 +849,7 @@ class PrioritizedMemory:
     Class of the prioritized experience replay memory.
     """
 
-    def __init__(self, max_size, sliding='oldest'):
+    def __init__(self, max_size, sliding="oldest"):
         """
         Description
         -------------
@@ -859,12 +875,14 @@ class PrioritizedMemory:
         """
 
         self.max_size = max_size
-        assert (sliding in ['oldest', 'random']
-                ), "sliding parameter must be either 'oldest' or 'random'"
+        assert sliding in [
+            "oldest",
+            "random",
+        ], "sliding parameter must be either 'oldest' or 'random'"
         self.sliding = sliding
         self.buffer = np.empty((2, max_size), dtype=object)
-        self.tree = SumTree(max_size=max_size)    # Initialize Sum-Tree
-        self.heap = Heap()                        # Initialize Heap
+        self.tree = SumTree(max_size=max_size)  # Initialize Sum-Tree
+        self.heap = Heap()  # Initialize Heap
 
     def update(self, index, priority):
         """
@@ -918,12 +936,12 @@ class PrioritizedMemory:
             self.heap.insert(leaf)
 
         else:
-            if self.sliding == 'oldest':
+            if self.sliding == "oldest":
                 index = Node.count % self.max_size
                 # We need to increment Node.count sor that we cycle again through
                 Node.count += 1
                 # indices from 0 to (self.max_size-1)
-            elif self.sliding == 'random':
+            elif self.sliding == "random":
                 # No need to increment Node.count here since its value does not matter
                 # anymore.
                 index = np.random.randint(0, self.max_size)

@@ -25,7 +25,7 @@ def build_ou_process(T=100000, theta=0.1, sigma=0.1, random_state=None):
     """
     X = np.empty(T)
     t = 0
-    x = 0.
+    x = 0.0
     if random_state is not None:
         rng = np.random.RandomState(random_state)
         normals = rng.normal(0, 1, T)
@@ -34,9 +34,9 @@ def build_ou_process(T=100000, theta=0.1, sigma=0.1, random_state=None):
         normals = np.random.normal(0, 1, T)
 
     for t in range(T):
-        x += -x*theta + sigma*normals[t]
+        x += -x * theta + sigma * normals[t]
         X[t] = x
-    X /= sigma*np.sqrt(1./2./theta)
+    X /= sigma * np.sqrt(1.0 / 2.0 / theta)
     return X
 
 
